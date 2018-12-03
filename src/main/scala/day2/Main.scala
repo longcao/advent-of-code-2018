@@ -16,6 +16,7 @@ object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
     args(0) match {
       case "part1" => part1
+      case "part2" => part2
       case _       => IO.pure(ExitCode.Error)
     }
   }
@@ -46,4 +47,16 @@ object Main extends IOApp {
     }
     .flatMap { case (totalTwos, totalThrees) => IO(println(totalTwos * totalThrees)) }
     .as(ExitCode.Success)
+
+  def part2 = {
+    input.compile.toList
+      .map { list =>
+        list.sorted.sliding(2)
+          .find(pairs => pairs(0).diff(pairs(1)).length == 1)
+      }
+      .flatMap {
+        case Some(pairs) => IO(println(pairs(0).intersect(pairs(1)))).as(ExitCode.Success)
+        case None        => IO(ExitCode.Error)
+      }
+  }
 }
