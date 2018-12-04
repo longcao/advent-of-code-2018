@@ -53,6 +53,7 @@ lazy val root = (project in file("."))
         "-Ywarn-value-discard"               // Warn when non-Unit expression results are unused.
     ),
     libraryDependencies ++= List(
+      Dependencies.atto,
       Dependencies.fs2Core,
       Dependencies.fs2Io
     ))
