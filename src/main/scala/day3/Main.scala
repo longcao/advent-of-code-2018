@@ -23,7 +23,7 @@ object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
     args(0) match {
       case "part1" => part1
-      //case "part2" => part2
+      case "part2" => part2
       case _       => IO.pure(ExitCode.Error)
     }
   }
@@ -71,13 +71,32 @@ object Main extends IOApp {
     newMatrix
   }
 
-  def part1 = input.map(parseClaim)
-    .collect { case ParseResult.Done(_, claim) => claim }
-    .compile
-    .fold (Array.ofDim[Int](1000, 1000)) { (matrix, claim) =>
-      addClaim(matrix, claim)
-    }
-    .map(matrix => countOverlaps(matrix))
+  def claims: Stream[IO, Claim] =
+    input.map(parseClaim)
+      .collect { case ParseResult.Done(_, claim) => claim }
+
+  def claimedMatrix: IO[Array[Array[Int]]] =
+    claims
+      .compile
+      .fold (Array.ofDim[Int](1000, 1000)) { (matrix, claim) =>
+        addClaim(matrix, claim)
+      }
+
+  def part1 = claimedMatrix.map(matrix => countOverlaps(matrix))
     .flatTap(overlaps => IO(println(overlaps)))
     .as(ExitCode.Success)
+
+  def part2 = claimedMatrix.flatMap { matrix =>
+    claims.find { claim =>
+      (for {
+        row    <- claim.y until (claim.y + claim.height)
+        column <- claim.x until (claim.x + claim.width)
+      } yield (row, column))
+        .forall { case (row, column) =>
+          matrix(row)(column) == 1
+        }
+    }
+    .compile.last
+    .flatTap(soleClaim => IO(println(soleClaim)))
+  }.as(ExitCode.Success)
 }
