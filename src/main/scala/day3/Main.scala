@@ -20,6 +20,14 @@ case class Claim(
   height: Int)
 
 object Main extends IOApp {
+  def run(args: List[String]): IO[ExitCode] = {
+    args(0) match {
+      case "part1" => part1
+      //case "part2" => part2
+      case _       => IO.pure(ExitCode.Error)
+    }
+  }
+
   val input: Stream[IO, String] =
     file.readAll[IO](Paths.get("src/main/scala/day3/input.txt"), global, 256)
       .through(text.utf8Decode)
@@ -43,13 +51,33 @@ object Main extends IOApp {
     parser.parseOnly(str)
   }
 
-  def run(args: List[String]): IO[ExitCode] = {
-    input.map(parseClaim)
-      .collect { case ParseResult.Done(_, claim) => claim }
-      .compile.drain
+  def printMatrix(matrix: Array[Array[Int]]): IO[Unit] =
+    IO(matrix.map(_.mkString(" ")).foreach(println))
 
-    val matrix = Array.ofDim[Int](2000, 2000)
+  def countOverlaps(matrix: Array[Array[Int]]): Int =
+    matrix.map(row => row.filter(_ >= 2).size).sum
 
-    IO.pure(ExitCode.Success)
+  def addClaim(matrix: Array[Array[Int]], claim: Claim): Array[Array[Int]] = {
+    val newMatrix = matrix.clone()
+
+    for {
+      row    <- claim.y until (claim.y + claim.height)
+      column <- claim.x until (claim.x + claim.width)
+    } {
+      val currentCount = newMatrix(row)(column)
+      newMatrix(row)(column) = currentCount + 1
+    }
+
+    newMatrix
   }
+
+  def part1 = input.map(parseClaim)
+    .collect { case ParseResult.Done(_, claim) => claim }
+    .compile
+    .fold (Array.ofDim[Int](1000, 1000)) { (matrix, claim) =>
+      addClaim(matrix, claim)
+    }
+    .map(matrix => countOverlaps(matrix))
+    .flatTap(overlaps => IO(println(overlaps)))
+    .as(ExitCode.Success)
 }
