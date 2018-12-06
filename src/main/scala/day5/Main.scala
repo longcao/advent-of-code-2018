@@ -13,23 +13,28 @@ import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
-    input.compile
-      .fold(Chain.empty[Char]) { (chain, char) =>
-        chain.uncons match {
-          case Some((head, tail)) =>
-            // compare their decimal values, alpha chars are 32 apart from the other case
-            if (Math.abs(head.compare(char)) == 32) {
-              tail
-            } else {
-              chain.prepend(char)
-            }
-          case None =>
-            chain.prepend(char)
-        }
-      }
-      .flatTap(result => IO(println(s"Final result: ${result.length}")))
-      .as(ExitCode.Success)
+    args(0) match {
+      case "part1" => part1
+      case _       => IO.pure(ExitCode.Error)
+    }
   }
+
+  def part1 = input.compile
+    .fold(Chain.empty[Char]) { (chain, char) =>
+      chain.uncons match {
+        case Some((head, tail)) =>
+          // compare their decimal values, alpha chars are 32 apart from the other case
+          if (Math.abs(head.compare(char)) == 32) {
+            tail
+          } else {
+            chain.prepend(char)
+          }
+        case None =>
+          chain.prepend(char)
+      }
+    }
+    .flatTap(result => IO(println(s"Final result: ${result.length}")))
+    .as(ExitCode.Success)
 
   val input: Stream[IO, Char] =
     file.readAll[IO](Paths.get("src/main/scala/day5/input.txt"), global, 256)
