@@ -71,7 +71,16 @@ object Main extends IOApp {
 
           println(s"Most asleep guard: #$mostAsleepGuardId")
           println(s"Most common minute #$mostAsleepGuardId is asleep: $mostCommonMinute")
-          println(s"mostAsleepGuardId * mostCommonMinute: ${mostAsleepGuardId * mostCommonMinute}")
+          println(s"mostAsleepGuardId * mostCommonMinute: ${mostAsleepGuardId * mostCommonMinute}\n")
+
+          val ((mostAsleepGuardSameMinute, mostAsleepGuardMinute), _) =
+            minutesAsleep.map(x => (x.guardId, x.minute))
+              .groupBy(identity)
+              .mapValues(_.length)
+              .maxBy(_._2)
+
+          println(s"Most asleep guard: #$mostAsleepGuardSameMinute on minute $mostAsleepGuardMinute")
+          println(s"mostAsleepGuardSameMinute * mostAsleepGuardMinute: ${mostAsleepGuardSameMinute * mostAsleepGuardMinute}")
         }
       }
       .as(ExitCode.Success)
