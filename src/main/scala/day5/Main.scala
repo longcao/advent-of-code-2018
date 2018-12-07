@@ -1,7 +1,7 @@
 package day5
 
-import cats.effect._
 import cats.data.Chain
+import cats.effect._
 import cats.implicits._
 
 import fs2._
