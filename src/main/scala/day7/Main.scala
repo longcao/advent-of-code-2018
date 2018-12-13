@@ -11,7 +11,7 @@ import fs2.io._
 
 import java.nio.file.Paths
 
-import scala.collection.immutable.SortedSet
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp {
@@ -23,31 +23,26 @@ object Main extends IOApp {
   }
 
   def topologicalSort(edgeList: List[(Char, Char)]) = {
-    def tsort(dependenciesMap: Map[Char, SortedSet[Char]], acc: Chain[Char]): Chain[Char] = {
-      val (noDependencies, hasDependencies) =
-        dependenciesMap.partition { case (_, v) => v.isEmpty }
+    @tailrec def tsort(dependenciesMap: Map[Char, Set[Char]], acc: Chain[Char]): Chain[Char] = {
+      val noDependencies = dependenciesMap.filter { case (_, v) => v.isEmpty }
 
-      if (noDependencies.isEmpty) {
-        acc
-      } else {
-        val next = noDependencies.keys.toList.sorted
+      noDependencies.keys.toList.sorted.headOption match {
+        case Some(next) =>
+          // remove next from downstream dependencies and the dependency map altogether
+          val newDependenciesMap = dependenciesMap
+            .mapValues(dependencies => dependencies - next) - next
 
-        val newDependenciesMap =
-          hasDependencies.mapValues { dependencies =>
-            dependencies -- next.to[SortedSet]
-          }
-
-        val newAcc = acc.concat(Chain.fromSeq(next))
-
-        tsort(newDependenciesMap, newAcc)
+          tsort(newDependenciesMap, acc.append(next))
+        case None =>
+          acc
       }
     }
 
     // map of child -> parent nodes
-    val dependenciesMap: Map[Char, SortedSet[Char]] =
-      edgeList.foldLeft(Map.empty[Char, SortedSet[Char]]) { case (acc, (parent, child)) =>
-        acc.updated(child, acc.getOrElse(child, SortedSet.empty[Char]) + parent)
-          .updated(parent, acc.getOrElse(parent, SortedSet.empty[Char]))
+    val dependenciesMap: Map[Char, Set[Char]] =
+      edgeList.foldLeft(Map.empty[Char, Set[Char]]) { case (acc, (parent, child)) =>
+        acc.updated(child, acc.getOrElse(child, Set.empty[Char]) + parent)
+          .updated(parent, acc.getOrElse(parent, Set.empty[Char]))
       }
 
     tsort(dependenciesMap, Chain.empty[Char])
@@ -57,11 +52,7 @@ object Main extends IOApp {
     input
       .compile.toList
       .map(topologicalSort)
-      .flatTap { result =>
-        IO {
-          println(result)
-        }
-      }
+      .flatTap(result => IO(println(result.toList.mkString)))
       .as(ExitCode.Success)
   }
 
